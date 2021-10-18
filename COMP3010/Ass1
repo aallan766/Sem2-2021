@@ -1,0 +1,103 @@
+import java.util.*;
+
+@SuppressWarnings("unchecked")
+
+public class comp3010ass1 {
+    public static void main(String[] args) throws Exception {
+        ArrayList<Integer> result = new ArrayList<>();
+        HashMap<Integer, Integer> ID = new HashMap<>();
+        int groupsNum;      
+
+        Scanner in = new Scanner(System.in);
+        System.out.print("Enter the number of groups from which you must find representatives:");
+
+        //Using an arraylist to store the rows & creates rows ready for input
+        groupsNum = in.nextInt();
+        in.nextLine();
+        ArrayList<Integer>[] row = new ArrayList[groupsNum];
+        for (int i = 0; i < groupsNum; i++) {
+            row[i] = new ArrayList<Integer>();
+        }
+
+        System.out.print("Enter the list of members of each group (one group per line, each terminated by 0): \n");
+
+        //Takes input by rows
+        for (int i = 0; i < groupsNum; i++) {
+            while (in.hasNext()) {
+                int input = in.nextInt();
+                if (input == 0)
+                    break;
+                if (ID.get(input) == null)
+                    ID.put(input, 1);
+                else if (input != 0)
+                    ID.replace(input, ID.get(input) + 1);
+                row[i].add(input);
+            }
+        }
+
+        //Keeping track of the number of groups
+        int count = 0;        
+        HashMap<Integer, Integer> sorted = sortByVal(ID);
+        for (Integer key : sorted.keySet()) {
+            while (count <= groupsNum) {
+                result.add(key);
+                count++;
+            }
+        }
+
+        //Displays what the input was
+        for (int i = 0; i < groupsNum; i++) {
+            for (int j = 0; j < row[i].size(); j++) {
+                System.out.print(row[i].get(j) + " ");
+            }
+            System.out.println();
+        }       
+
+        //Prints all values that are found and exits when stop is false 
+        for (int i = 0; i < groupsNum; i++) {
+            boolean stop = true;
+            for (int j = 0; j < row[i].size(); j++) {
+                if (!result.contains(row[i].get(j)))
+                    stop = false;
+            }
+            if (stop == false)
+                result.add(row[i].get(1));
+        }
+
+        ArrayList<Integer> Result = new ArrayList<>(HSet);
+        ArrayList<Integer> optimal = new ArrayList<>();
+        LinkedHashSet<Integer> linkedHash = new LinkedHashSet<>(result);
+
+        //Trim result down to produce the optimal
+        for(int i = 0; i <= Result.size(); i++){
+            if(groupsNum > 0){
+                groupsNum = groupsNum - sorted.get(Result.get(0));
+                optimal.add(Result.get(i));
+            }
+        }
+
+        in.close();
+        System.out.print("The number of members selected and their ids are :" + optimal.size() + "\n");
+        System.out.println(optimal);
+    }
+
+
+    //Method used to sort and compare the input
+    public static HashMap<Integer, Integer> sortByVal(HashMap<Integer, Integer> hm) {
+
+        List<Map.Entry<Integer, Integer>> newList = new LinkedList<Map.Entry<Integer, Integer>>(hm.entrySet());
+
+        Collections.sort(newList, new Comparator<Map.Entry<Integer, Integer>>() {
+            public int compare(Map.Entry<Integer, Integer> option1, Map.Entry<Integer, Integer> option2) {
+                return (option2.getValue()).compareTo(option1.getValue());
+            }
+        });        
+
+        HashMap<Integer, Integer> temp = new LinkedHashMap<Integer, Integer>();
+        for (Map.Entry<Integer, Integer> value : newList) {
+            temp.put(value.getKey(), value.getValue());
+        }
+        return temp;
+
+    }
+}
