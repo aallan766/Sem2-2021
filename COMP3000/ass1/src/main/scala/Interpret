@@ -1,0 +1,198 @@
+/*
+ * This file is part of COMP3000 assignment 1.
+ *
+ * Copyright (C) 2021 Kym Haines, Macquarie University.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+// https://www.scala-lang.org/api/2.12.8/scala/util/matching/Regex.html
+// https://www.scala-lang.org/api/2.12.8/scala/collection/immutable/List.html
+// https://www.scala-lang.org/api/2.12.8/scala/collection/immutable/StringLike.html
+// https://www.scala-lang.org/api/2.12.8/scala/collection/immutable/Map.html
+
+package org.mq.interpret
+
+import scala.util.matching._
+
+object Interpret {
+
+  sealed abstract class LObject
+  case class LSymbol(sym:String) extends LObject
+  case class LNumber(num:Int) extends LObject
+  case class LList(head:LObject, tail:LObject) extends LObject
+
+  val nil = LSymbol("nil")
+  val T = LSymbol("t")
+  val error = LSymbol("ERROR")
+
+  def resetEnv:Unit =
+  {
+    // TO DO: reset your functions/variables environment
+  }
+
+  val pat = "[()-+/*]|[a-zA-Z]+(\\+|-)?[0-9]+".r
+
+  //helper method to find negative numbers
+  def isNeg(s: String): Boolean = s.matches("(\\+|-)?[0-9]+")
+
+  def matchPat(line:String):List[String] = pat.findAllIn(line.toLowerCase).toList
+
+  // excludes brackets
+  def strToLObj(s:String):LObject =
+  {
+    val ch = s.head
+    if(ch.isLetter) LSymbol(s)
+    else if(ch.isDigit) LNumber(s.toInt)
+    else if(isNeg(s) == true) return LNumber(s.toInt)
+    else if(s=="-") LSymbol(s)
+    else if(s=="+") LSymbol(s)
+    else if(s=="/") LSymbol(s)
+    else if(s=="*") LSymbol(s)
+    else error
+  }
+
+  def tokensToLObjs(a:List[String]):Option[LObject] =
+  {
+    // TO DO: convert a list of token strings to an LObject
+    // NOTE: anywhere () is seen, it should be interpreted as nil
+    a match{ 
+      case List(a) => Option(strToLObj(a))
+    }
+  }
+
+  // for testing
+  def lineToLObj(line:String):LObject = tokensToLObjs(matchPat(line)) match
+  {
+  case Some(s) => s
+  case None    => error
+  }
+
+  def setValue(varName:String, value:LObject):Unit =
+  {
+    // TO DO: assign a value to a variable
+  }
+
+  def getValue(varName:String):LObject =
+  {
+    // TO DO: get the value of a variable; or error if variable not defined
+    error
+  }
+
+  def add(a:LObject, b:LObject):LObject = (a,b) match{
+    case (LNumber(a), LNumber(b)) => LNumber(a + b)
+    case _ => error
+  }    // TO DO
+
+  def sub(a:LObject, b:LObject):LObject =  (a,b) match{
+    case (LNumber(a), LNumber(b)) => LNumber(a - b)
+    case _ => error
+  }       // TO DO
+
+  def mul(a:LObject, b:LObject):LObject =  (a,b) match{
+    case (LNumber(a), LNumber(b)) => LNumber(a * b)
+    case _ => error
+  }      // TO DO
+
+  def div(a:LObject, b:LObject):LObject =  (a,b) match{
+    case (LNumber(a), LNumber(b)) => LNumber(a / b)
+    case _ => error
+  }       // TO DO
+
+  def car(a:LObject):LObject = a match { 
+    case LList(head, _) => head
+    case _ => error
+  }       
+
+  def cdr(a:LObject):LObject = a match { 
+    case LList(_, tail) => tail
+    case _ => error
+  }   
+
+  def cons(a:LObject, b:LObject):LObject = (a,b) match {
+    case (LSymbol(a), LList(b,c)) => LList(LSymbol(a), LList(b,c))
+    case _ => error
+  }    
+
+  def eeqq(a:LObject, b:LObject):LObject = (a==b) match { 
+    case true => T
+    case _ => nil
+  }   
+
+  def setq(v:String, b:LObject):LObject = error    // TO DO
+
+  def iiff(cond:LObject, ifThen:LObject, ifElse:LObject):LObject = error //TO DO
+
+  def defun(name:String, arg:String, body:LObject):LObject =
+  {
+    // TO DO: define a function
+    // the function definition source would look like:
+    //      (def name (arg) body)
+    LSymbol(name)
+  }
+
+  def funCall(name:String, arg:LObject):LObject = error    // TO DO
+
+  def eval(a:LObject):LObject = a match
+  {
+  case LSymbol("nil") => nil
+  case LSymbol("t") => T
+  // TO DO: add cases for all the other possibilities in the eval table
+  //        in the spec
+  case LNumber(a) =>LNumber(a)
+
+  case LList(LSymbol("quote"), tail) => car(tail) 
+  
+  case LList(LSymbol("car"), tail) => eval(car(tail)) match {
+    case LList(head, tail) => head
+    case _ => error
+    }
+
+  case LList(LSymbol("+"), tail) => tail match {
+    case LList(head, tail) => tail match{ 
+      case LList(hd, t1) => add(head, hd)
+      case _ => error
+      }
+    }
+
+  case LList(LSymbol("cdr"), tail) => tail match{ 
+      case LList(head, tail) => cdr(eval(head))
+      case _ => error
+    }
+
+  case LList(LSymbol("eq"), tail) => tail match{ 
+      case LList(head, tail) => eeqq(head, tail)
+      case _ => error
+    }
+  case _ => error
+  }
+
+  def showLine(s:LObject):Unit = { show(s);  println() }
+
+  def show(s:LObject):Unit = s match
+  {
+  case LList(h, t)  => print("(")
+                       show(h)
+                       showList(t)
+                       print(")")
+  case LSymbol(a)   => print(a)
+  case LNumber(a)   => print(a)
+  }
+
+  def showList(s:LObject):Unit = s match
+  {
+  case LSymbol("nil") =>
+  case a:LList => print(" ")
+                  show(a.head)
+                  a.tail match
+                  {
+                  case b:LList => showList(b)
+                  case _ =>
+                  }
+  case _ => print(" . ")
+            show(s)
+  }
+
+}
